@@ -133,6 +133,8 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 
 /* Book sheet */
 .detail-head { display: flex; gap: 16px; align-items: flex-start; }
+.cover-col { display: grid; justify-items: center; gap: 2px; flex: none; }
+.photo-btn { font-size: 13px; cursor: pointer; text-align: center; }
 .detail-head h2 { font-family: "New York", "Iowan Old Style", Georgia, serif; font-size: 22px; line-height: 1.2; }
 .detail-head .subtitle { color: var(--muted); margin-top: 4px; font-size: 15px; }
 .detail-head .author { margin-top: 8px; font-weight: 500; }

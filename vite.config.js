@@ -31,7 +31,7 @@ export default defineConfig(({ command }) => ({
           {
             // Cover images: cache once, show offline afterwards
             urlPattern: ({ url }) =>
-              url.href.startsWith("https://portal.dnb.de/opac/mvb/cover") ||
+              url.href.startsWith("https://books.google.com/books/content") ||
               url.hostname === "covers.openlibrary.org",
             handler: "CacheFirst",
             options: {

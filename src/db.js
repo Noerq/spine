@@ -51,6 +51,11 @@ export function put(book) {
   return tx("books", "readwrite", (s) => s.put(record)).then(() => record);
 }
 
+/** Write without touching updatedAt (background fixes like covers must not win merges). */
+export function putQuiet(book) {
+  return tx("books", "readwrite", (s) => s.put(book));
+}
+
 export function remove(isbn) {
   const now = new Date().toISOString();
   return tx("books", "readwrite", (s) => s.put({ isbn, deleted: true, updatedAt: now }));

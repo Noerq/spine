@@ -100,24 +100,29 @@ async function fromOpenLibrary(isbn) {
 }
 
 // --- Covers ---
+// DNB/MVB covers sit behind a bot challenge (Anubis) for browsers, so we use
+// Google Books' image endpoint (no API key, no quota) and Open Library.
 
-function imageLoads(url) {
+// Real Google covers are scaled up by fife=w400 (>= 300px wide). Its placeholders
+// ("image not available", generic grey book) stay at 128px.
+const isGooglePlaceholder = (img) => img.naturalWidth <= 128;
+
+function imageLoads(url, rejectIf = () => false) {
   return new Promise((resolve) => {
     const img = new Image();
     img.referrerPolicy = "no-referrer";
     const timer = setTimeout(() => resolve(false), TIMEOUT_MS);
-    img.onload = () => { clearTimeout(timer); resolve(img.naturalWidth > 1); };
+    img.onload = () => { clearTimeout(timer); resolve(img.naturalWidth > 1 && !rejectIf(img)); };
     img.onerror = () => { clearTimeout(timer); resolve(false); };
     img.src = url;
   });
 }
 
-async function findCover(isbn) {
-  const candidates = [
-    `https://portal.dnb.de/opac/mvb/cover?isbn=${isbn}`,
-    `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`,
-  ];
-  for (const url of candidates) if (await imageLoads(url)) return url;
+export async function findCover(isbn) {
+  const google = `https://books.google.com/books/content?vid=ISBN:${isbn}&printsec=frontcover&img=1&zoom=1&fife=w400-h600`;
+  if (await imageLoads(google, isGooglePlaceholder)) return google;
+  const ol = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`;
+  if (await imageLoads(ol)) return ol;
   return "";
 }
 

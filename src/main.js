@@ -1,7 +1,7 @@
 import "./style.css";
 import * as db from "./db.js";
 import { toIsbn13, format as formatIsbn } from "./isbn.js";
-import { lookupIsbn } from "./lookup.js";
+import { lookupIsbn, findCover } from "./lookup.js";
 import { exportLibrary, importLibrary } from "./backup.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -243,7 +243,13 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
   bookBody.innerHTML = `
     ${notice ? `<p class="notice">${esc(notice)}</p>` : ""}
     <div class="detail-head">
-      ${coverHtml(b, true)}
+      <div class="cover-col">
+        ${coverHtml(b, true)}
+        <label class="link photo-btn">
+          ${b.coverUrl ? "Foto ändern" : "Cover fotografieren"}
+          <input type="file" accept="image/*" capture="environment" hidden data-photo>
+        </label>
+      </div>
       <div>
         <h2>${esc(b.title || "Unbekannter Titel")}</h2>
         ${b.subtitle ? `<div class="subtitle">${esc(b.subtitle)}</div>` : ""}
@@ -290,6 +296,24 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
     return true;
   };
 
+  bookBody.querySelector("[data-photo]").onchange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      readForm();
+      b.coverUrl = await photoToDataUrl(file);
+      if (!isNew) {
+        await db.put(b);
+        await reload();
+      }
+      showBook({ book: b, isNew, editing });
+      toast("Cover gespeichert");
+    } catch (err) {
+      console.error(err);
+      toast("Foto konnte nicht verarbeitet werden");
+    }
+  };
+
   bookBody.onclick = async (e) => {
     const statusBtn = e.target.closest("[data-status]");
     if (statusBtn) {
@@ -334,6 +358,43 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
       bookDlg.close();
     }
   };
+}
+
+// Shrink a cover photo to max 400px and store it inline as JPEG (~20-40 KB).
+async function photoToDataUrl(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, 400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// Fill in missing covers for existing books (and replace old DNB cover links,
+// which browsers can't load). Runs quietly in the background, at most once a week per book.
+async function refreshCovers() {
+  if (!navigator.onLine) return;
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+  const todo = (await db.getAll()).filter(
+    (b) => (!b.coverUrl || b.coverUrl.startsWith("https://portal.dnb.de/")) && !(b.coverCheckedAt > weekAgo),
+  );
+  let changed = false;
+  for (const b of todo) {
+    const coverUrl = await findCover(b.isbn);
+    const current = await db.get(b.isbn);
+    if (!current || (current.coverUrl && !current.coverUrl.startsWith("https://portal.dnb.de/"))) continue;
+    await db.putQuiet({ ...current, coverUrl, coverCheckedAt: new Date().toISOString() });
+    changed ||= !!coverUrl || !!current.coverUrl;
+  }
+  if (changed) await reload();
 }
 
 // ---------- backup menu ----------
@@ -398,4 +459,4 @@ for (const dlg of document.querySelectorAll("dialog.sheet")) {
 
 state.sort = lsGet("spine.sort") || "added";
 $("#sort").value = state.sort;
-reload();
+reload().then(refreshCovers);
