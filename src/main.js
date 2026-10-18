@@ -1,7 +1,7 @@
 import "./style.css";
 import * as db from "./db.js";
 import { toIsbn13, format as formatIsbn } from "./isbn.js";
-import { lookupIsbn, findCover } from "./lookup.js";
+import { lookupIsbn, findCover, findSimilarCover } from "./lookup.js";
 import { exportLibrary, importLibrary } from "./backup.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -259,6 +259,8 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
         <div class="facts">ISBN ${esc(formatIsbn(b.isbn))}</div>
       </div>
     </div>
+    ${!b.coverUrl && b.title && !b.coverDeclined ? `
+      <div class="suggest" id="coverSuggest"><p class="muted small">Kein Cover für diese Ausgabe. Ich suche ein ähnliches …</p></div>` : ""}
     ${editing ? `
       <form class="edit" id="editForm">
         <label>Titel <input name="title" value="${esc(b.title)}" required></label>
@@ -314,6 +316,31 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
     }
   };
 
+  const suggestBox = bookBody.querySelector("#coverSuggest");
+  if (suggestBox) {
+    if (!similarCache.has(b.isbn)) similarCache.set(b.isbn, findSimilarCover(b));
+    similarCache.get(b.isbn).then((url) => {
+      if (!suggestBox.isConnected) return;
+      suggestBox.innerHTML = url
+        ? `<img class="cover" src="${esc(url)}" alt="" referrerpolicy="no-referrer" data-initial="?">
+           <div>
+             <p class="small">Kein Cover für genau diese Ausgabe. Passt dieses Cover einer anderen Ausgabe?</p>
+             <div class="suggest-actions">
+               <button class="btn small-btn" data-act="useSimilar" data-url="${esc(url)}">Verwenden</button>
+               <button class="btn ghost small-btn" data-act="photo">Foto machen</button>
+             </div>
+             <button class="link" data-act="noCover">Ohne Cover lassen</button>
+           </div>`
+        : `<div>
+             <p class="small">Kein Cover gefunden. Du kannst es selbst fotografieren.</p>
+             <div class="suggest-actions">
+               <button class="btn ghost small-btn" data-act="photo">Foto machen</button>
+               <button class="link" data-act="noCover">Ohne Cover lassen</button>
+             </div>
+           </div>`;
+    });
+  }
+
   bookBody.onclick = async (e) => {
     const statusBtn = e.target.closest("[data-status]");
     if (statusBtn) {
@@ -329,6 +356,21 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (!act) return;
 
+    if (act === "photo") {
+      bookBody.querySelector("[data-photo]").click();
+      return;
+    }
+    if (act === "useSimilar" || act === "noCover") {
+      readForm();
+      if (act === "useSimilar") b.coverUrl = e.target.closest("[data-url]").dataset.url;
+      else b.coverDeclined = true;
+      if (!isNew) {
+        await db.put(b);
+        await reload();
+      }
+      showBook({ book: b, isNew, editing });
+      return;
+    }
     if (act === "save" || act === "saveNext") {
       if (!readForm()) return;
       await db.put(b);
@@ -359,6 +401,8 @@ function showBook({ book, isNew, editing = false, notice = "", retry = false }) 
     }
   };
 }
+
+const similarCache = new Map();
 
 // Shrink a cover photo to max 400px and store it inline as JPEG (~20-40 KB).
 async function photoToDataUrl(file) {

@@ -1,3 +1,4 @@
+[hidden] { display: none !important; }
 :root {
   --bg: #f6f1e9;
   --surface: #fffdf9;
@@ -140,6 +141,10 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 .detail-head .author { margin-top: 8px; font-weight: 500; }
 .facts { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .notice { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 0 0 14px; }
+.suggest { display: flex; gap: 12px; align-items: flex-start; background: var(--bg); border-radius: 12px; padding: 12px; margin-top: 14px; }
+.suggest p { margin: 0 0 8px; }
+.suggest-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.small-btn { padding: 8px 14px; font-size: 14px; }
 .status-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 18px 0 6px; }
 .status-group button {
   border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 4px; font-size: 14px;

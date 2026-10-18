@@ -127,6 +127,38 @@ export async function findCover(isbn) {
 }
 
 /**
+ * Cover of another German edition of the same book: ask the DNB for editions with
+ * the same title and author, then try their ISBNs (newest first). Returns "" if none.
+ */
+export async function findSimilarCover({ isbn, title, authors }) {
+  const cql = (s) => s.replace(/["?*!<>=\/()]/g, " ").replace(/\s+/g, " ").trim();
+  const t = cql(title || "");
+  if (!t) return "";
+  const lastName = cql((authors?.[0] || "").split(" ").pop() || "");
+  const query = `tit="${t}"` + (lastName ? ` and per=${lastName}` : "");
+  const url = `https://services.dnb.de/sru/dnb?version=1.1&operation=searchRetrieve&query=${encodeURIComponent(query)}&recordSchema=MARC21-xml&maximumRecords=25`;
+  try {
+    const xml = await (await fetchWithTimeout(url)).text();
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const isbns = [];
+    for (const f of doc.getElementsByTagNameNS("*", "datafield")) {
+      if (f.getAttribute("tag") !== "020") continue;
+      for (const sf of f.getElementsByTagNameNS("*", "subfield")) {
+        const m = sf.textContent.replace(/-/g, "").match(/97[89]\d{10}/);
+        if (m && m[0] !== isbn && !isbns.includes(m[0])) isbns.push(m[0]);
+      }
+    }
+    for (const other of isbns.slice(0, 10)) {
+      const cover = await findCover(other);
+      if (cover) return cover;
+    }
+  } catch (e) {
+    console.warn("similar cover", e);
+  }
+  return "";
+}
+
+/**
  * Look up a book. Returns metadata (or null if not found anywhere).
  * Throws only if every source failed due to network errors.
  */
