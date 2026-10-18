@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Spine</title>
+  <meta name="description" content="Deine Bücher, schnell erfasst." />
+  <meta name="theme-color" content="#f6f1e9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1b1916" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Spine" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Spine</h1>
+      <span id="count" class="count"></span>
+    </div>
+    <button id="menuBtn" class="icon-btn" aria-label="Sicherung &amp; Einstellungen">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm8.6-2.3.1-1.2-.1-1.2 2-1.6-2-3.4-2.4 1a8 8 0 0 0-2-1.2L15.8 3h-4l-.4 2.6a8 8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6-.1 1.2.1 1.2-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2l.4 2.6h4l.4-2.6a8 8 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6Z"/></svg>
+    </button>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="controls">
+    <input id="search" type="search" placeholder="Titel, Autor oder ISBN suchen" autocomplete="off" enterkeyhint="search" />
+    <div class="filters" role="group" aria-label="Lesestatus filtern">
+      <button class="chip active" data-filter="all">Alle</button>
+      <button class="chip" data-filter="unread">Ungelesen</button>
+      <button class="chip" data-filter="reading">Lese gerade</button>
+      <button class="chip" data-filter="read">Gelesen</button>
+    </div>
+    <label class="sort">
+      Sortieren:
+      <select id="sort">
+        <option value="added">Zuletzt hinzugefügt</option>
+        <option value="title">Titel</option>
+        <option value="author">Autor</option>
+      </select>
+    </label>
+  </div>
+
+  <main>
+    <ul id="list" class="list"></ul>
+    <div id="empty" class="empty" hidden></div>
+  </main>
+
+  <button id="addBtn" class="fab">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M3 5h2v14H3V5Zm3 0h1v14H6V5Zm2 0h2v14H8V5Zm3 0h1v14h-1V5Zm3 0h2v14h-2V5Zm3 0h1v14h-1V5Zm2 0h2v14h-2V5Z"/></svg>
+    Buch scannen
+  </button>
+
+  <!-- Scanner -->
+  <dialog id="scanDlg" class="scan">
+    <div class="scan-view">
+      <video id="video" playsinline muted></video>
+      <div class="scan-guide"><span></span></div>
+      <p id="scanHint" class="scan-hint">Halte den Barcode auf der Rückseite in den Rahmen</p>
+    </div>
+    <form id="manualForm" class="manual">
+      <input id="manualIsbn" inputmode="numeric" placeholder="… oder ISBN eintippen" autocomplete="off" />
+      <button class="btn">Suchen</button>
+    </form>
+    <button id="scanClose" class="btn ghost wide" type="button" autofocus>Abbrechen</button>
+  </dialog>
+
+  <!-- Book (new or existing) -->
+  <dialog id="bookDlg" class="sheet"><div id="bookBody"></div></dialog>
+
+  <!-- Backup & settings -->
+  <dialog id="menuDlg" class="sheet">
+    <h2>Sicherung</h2>
+    <p class="muted">Deine Bücher sind nur auf diesem Gerät gespeichert. Sicher sie regelmäßig in iCloud Drive. So kannst du sie auf einem anderen Gerät importieren.</p>
+    <p id="backupInfo" class="info"></p>
+    <button id="exportBtn" class="btn wide">Sicherung exportieren</button>
+    <label class="btn ghost wide file-btn">
+      Sicherung importieren
+      <input id="importInput" type="file" accept=".json,application/json" hidden />
+    </label>
+    <p class="muted small">Beim Import werden die Bestände zusammengeführt. Gibt es ein Buch auf beiden Geräten, gilt die neuere Änderung. Es geht nichts verloren.</p>
+    <p id="storageInfo" class="muted small"></p>
+    <button class="btn ghost wide" data-close>Schließen</button>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
